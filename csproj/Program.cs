@@ -29,13 +29,8 @@ class Program
         {
             var originalBytes = File.ReadAllBytes(originalFilePath);
             var modifiedBytes = File.ReadAllBytes(modifiedFilePath);
-
-            // Create temporary ZIP files using SharpZipLib
-            string tempOriginalZipPath = CreateTempZipFile(originalBytes);
-            string tempModifiedZipPath = CreateTempZipFile(modifiedBytes);
-
-            var originalDocument = new WmlDocument(tempOriginalZipPath);
-            var modifiedDocument = new WmlDocument(tempModifiedZipPath);
+            var originalDocument = new WmlDocument(originalFilePath, originalBytes);
+            var modifiedDocument = new WmlDocument(modifiedFilePath, modifiedBytes);
 
             var comparisonSettings = new WmlComparerSettings
             {
@@ -50,10 +45,6 @@ class Program
             Console.WriteLine($"Revisions found: {revisions.Count}");
 
             File.WriteAllBytes(outputFilePath, comparisonResults.DocumentByteArray);
-
-            // Clean up temporary files
-            File.Delete(tempOriginalZipPath);
-            File.Delete(tempModifiedZipPath);
         }
         catch (Exception ex)
         {
@@ -61,28 +52,5 @@ class Program
             Console.WriteLine("Detailed Stack Trace:");
             Console.WriteLine(ex.StackTrace);
         }
-    }
-
-    static string CreateTempZipFile(byte[] documentBytes)
-    {
-        string tempZipPath = Path.GetTempFileName();
-        using (ZipOutputStream zipOutputStream = new ZipOutputStream(File.Create(tempZipPath)))
-        {
-            zipOutputStream.SetLevel(9); // 9 = Best Compression
-
-            // Create the necessary entries for a valid Word document package
-            ZipEntry relsEntry = new ZipEntry("_rels/.rels");
-            zipOutputStream.PutNextEntry(relsEntry);
-            zipOutputStream.Write(new byte[0], 0, 0);
-            zipOutputStream.CloseEntry();
-
-            ZipEntry documentEntry = new ZipEntry("word/document.xml");
-            zipOutputStream.PutNextEntry(documentEntry);
-            zipOutputStream.Write(documentBytes, 0, documentBytes.Length);
-            zipOutputStream.CloseEntry();
-
-            zipOutputStream.Close();
-        }
-        return tempZipPath;
     }
 }
