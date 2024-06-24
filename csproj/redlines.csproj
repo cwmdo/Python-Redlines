@@ -9,7 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="DocumentFormat.OpenXml" Version="2.8.1" />
-    <PackageReference Include="Open-Xml-PowerTools" Version="4.4.0" />
+    <PackageReference Include="OpenXmlPowerTools.NetStandard" Version="4.6.0" />
   </ItemGroup>
 
 </Project>
