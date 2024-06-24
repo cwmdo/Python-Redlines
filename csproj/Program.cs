@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using OpenXmlPowerTools;
 using DocumentFormat.OpenXml.Packaging;
+using ICSharpCode.SharpZipLib.Zip;
 
 class Program
 {
@@ -28,8 +29,33 @@ class Program
         {
             var originalBytes = File.ReadAllBytes(originalFilePath);
             var modifiedBytes = File.ReadAllBytes(modifiedFilePath);
-            var originalDocument = new WmlDocument(originalFilePath, originalBytes);
-            var modifiedDocument = new WmlDocument(modifiedFilePath, modifiedBytes);
+
+            // Use SharpZipLib to create a temporary ZIP file for the original document
+            string tempOriginalZipPath = Path.GetTempFileName();
+            using (ZipOutputStream zipOutputStream = new ZipOutputStream(File.Create(tempOriginalZipPath)))
+            {
+                zipOutputStream.SetLevel(9); // 9 = Best Compression
+                ZipEntry zipEntry = new ZipEntry("document.xml");
+                zipOutputStream.PutNextEntry(zipEntry);
+                zipOutputStream.Write(originalBytes, 0, originalBytes.Length);
+                zipOutputStream.CloseEntry();
+                zipOutputStream.Close();
+            }
+
+            // Use SharpZipLib to create a temporary ZIP file for the modified document
+            string tempModifiedZipPath = Path.GetTempFileName();
+            using (ZipOutputStream zipOutputStream = new ZipOutputStream(File.Create(tempModifiedZipPath)))
+            {
+                zipOutputStream.SetLevel(9); // 9 = Best Compression
+                ZipEntry zipEntry = new ZipEntry("document.xml");
+                zipOutputStream.PutNextEntry(zipEntry);
+                zipOutputStream.Write(modifiedBytes, 0, modifiedBytes.Length);
+                zipOutputStream.CloseEntry();
+                zipOutputStream.Close();
+            }
+
+            var originalDocument = new WmlDocument(tempOriginalZipPath);
+            var modifiedDocument = new WmlDocument(tempModifiedZipPath);
 
             var comparisonSettings = new WmlComparerSettings
             {
@@ -44,6 +70,10 @@ class Program
             Console.WriteLine($"Revisions found: {revisions.Count}");
 
             File.WriteAllBytes(outputFilePath, comparisonResults.DocumentByteArray);
+
+            // Clean up temporary files
+            File.Delete(tempOriginalZipPath);
+            File.Delete(tempModifiedZipPath);
         }
         catch (Exception ex)
         {
@@ -53,4 +83,3 @@ class Program
         }
     }
 }
-
