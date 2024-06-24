@@ -30,29 +30,9 @@ class Program
             var originalBytes = File.ReadAllBytes(originalFilePath);
             var modifiedBytes = File.ReadAllBytes(modifiedFilePath);
 
-            // Use SharpZipLib to create a temporary ZIP file for the original document
-            string tempOriginalZipPath = Path.GetTempFileName();
-            using (ZipOutputStream zipOutputStream = new ZipOutputStream(File.Create(tempOriginalZipPath)))
-            {
-                zipOutputStream.SetLevel(9); // 9 = Best Compression
-                ZipEntry zipEntry = new ZipEntry("document.xml");
-                zipOutputStream.PutNextEntry(zipEntry);
-                zipOutputStream.Write(originalBytes, 0, originalBytes.Length);
-                zipOutputStream.CloseEntry();
-                zipOutputStream.Close();
-            }
-
-            // Use SharpZipLib to create a temporary ZIP file for the modified document
-            string tempModifiedZipPath = Path.GetTempFileName();
-            using (ZipOutputStream zipOutputStream = new ZipOutputStream(File.Create(tempModifiedZipPath)))
-            {
-                zipOutputStream.SetLevel(9); // 9 = Best Compression
-                ZipEntry zipEntry = new ZipEntry("document.xml");
-                zipOutputStream.PutNextEntry(zipEntry);
-                zipOutputStream.Write(modifiedBytes, 0, modifiedBytes.Length);
-                zipOutputStream.CloseEntry();
-                zipOutputStream.Close();
-            }
+            // Create temporary ZIP files using SharpZipLib
+            string tempOriginalZipPath = CreateTempZipFile(originalBytes);
+            string tempModifiedZipPath = CreateTempZipFile(modifiedBytes);
 
             var originalDocument = new WmlDocument(tempOriginalZipPath);
             var modifiedDocument = new WmlDocument(tempModifiedZipPath);
@@ -81,5 +61,28 @@ class Program
             Console.WriteLine("Detailed Stack Trace:");
             Console.WriteLine(ex.StackTrace);
         }
+    }
+
+    static string CreateTempZipFile(byte[] documentBytes)
+    {
+        string tempZipPath = Path.GetTempFileName();
+        using (ZipOutputStream zipOutputStream = new ZipOutputStream(File.Create(tempZipPath)))
+        {
+            zipOutputStream.SetLevel(9); // 9 = Best Compression
+
+            // Create the necessary entries for a valid Word document package
+            ZipEntry relsEntry = new ZipEntry("_rels/.rels");
+            zipOutputStream.PutNextEntry(relsEntry);
+            zipOutputStream.Write(new byte[0], 0, 0);
+            zipOutputStream.CloseEntry();
+
+            ZipEntry documentEntry = new ZipEntry("word/document.xml");
+            zipOutputStream.PutNextEntry(documentEntry);
+            zipOutputStream.Write(documentBytes, 0, documentBytes.Length);
+            zipOutputStream.CloseEntry();
+
+            zipOutputStream.Close();
+        }
+        return tempZipPath;
     }
 }
